@@ -4,6 +4,12 @@ import os
 app = Flask(__name__)
 PDF_FOLDER = "pdfs"
 
+# ✅ Root route for UptimeRobot or Render health check
+@app.route("/")
+def home():
+    return "✅ Bot is running!"
+
+# All subjects categorized
 subjects = {
     "theory": [
         "biology", "mathematics", "communication_skill", "electrical_engineering",
@@ -47,8 +53,7 @@ def download():
 
     return send_file(file_path, as_attachment=True)
 
+# ✅ Required for Render: bind to 0.0.0.0 and use $PORT
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
