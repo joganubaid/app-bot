@@ -68,7 +68,17 @@ def download():
 
     if os.path.isfile(file_path):
         log_download(user_id, subject, exam_type, year)
-        return send_from_directory(PDF_FOLDER, filename)
+        from flask import send_file
+
+@app.route("/download-url/<filename>")
+def download_url(filename):
+    file_path = os.path.join(PDF_FOLDER, filename)
+    if os.path.isfile(file_path):
+        return send_file(file_path, mimetype="application/pdf",
+                         download_name=filename,
+                         as_attachment=False)  # <- THIS enables preview
+    return "File not found", 404
+
     return "PDF Not Found", 404
 
 @app.route("/download-url/<path:filename>")
