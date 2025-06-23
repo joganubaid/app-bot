@@ -1,6 +1,6 @@
 import os
 import csv
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 import pandas as pd
@@ -32,7 +32,7 @@ years = ["2024", "2023"]
 
 @app.route("/")
 def home():
-    return "✅ Backend is running!"
+    return "\u2705 Backend is running!"
 
 @app.route("/subjects")
 def get_subjects():
@@ -68,24 +68,18 @@ def download():
 
     if os.path.isfile(file_path):
         log_download(user_id, subject, exam_type, year)
-        from flask import send_file
+        return send_file(file_path, mimetype="application/pdf",
+                         download_name=filename,
+                         as_attachment=False)
+    return "PDF Not Found", 404
 
-@app.route("/download-url/<filename>")
-def download_url(filename):
+@app.route("/download-url/<path:filename>")
+def serve_pdf_inline(filename):
     file_path = os.path.join(PDF_FOLDER, filename)
     if os.path.isfile(file_path):
         return send_file(file_path, mimetype="application/pdf",
                          download_name=filename,
-                         as_attachment=False)  # <- THIS enables preview
-    return "File not found", 404
-
-    return "PDF Not Found", 404
-
-@app.route("/download-url/<path:filename>")
-def download_url(filename):
-    file_path = os.path.join(PDF_FOLDER, filename)
-    if os.path.isfile(file_path):
-        return send_from_directory(PDF_FOLDER, filename)
+                         as_attachment=False)
     return "File not found", 404
 
 # === Helper Functions ===
@@ -135,7 +129,7 @@ def send_weekly_report():
         top_subjects = df["Subject"].value_counts().head(3)
         top_users = df["User"].value_counts().head(3)
 
-        print("\n📊 Weekly Report")
+        print("\n\U0001F4CA Weekly Report")
         print("Total Downloads:", total)
         print("Top Subjects:")
         print(top_subjects)
@@ -146,7 +140,7 @@ def send_weekly_report():
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(clean_logs, 'cron', hour=3)  # daily cleanup
+    scheduler.add_job(clean_logs, 'cron', hour=3)
     scheduler.add_job(send_weekly_report, 'cron', day_of_week='mon', hour=9)
     scheduler.start()
 
