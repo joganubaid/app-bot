@@ -13,7 +13,7 @@ LOG_FOLDER = "logs"
 os.makedirs(PDF_FOLDER, exist_ok=True)
 os.makedirs(LOG_FOLDER, exist_ok=True)
 
-# === Data Definitions ===
+# === Subject Lists ===
 theory_subjects = [
     "biology", "mathematics", "communication_skill", "electrical_engineering",
     "mechanical_engineering", "environmental_science", "physics"
@@ -32,7 +32,7 @@ years = ["2024", "2023"]
 
 @app.route("/")
 def home():
-    return "\u2705 Backend is running!"
+    return "✅ Flask backend is running."
 
 @app.route("/subjects")
 def get_subjects():
@@ -51,6 +51,22 @@ def get_years(subject, exam_type):
     if subject in theory_subjects and exam_type in exam_types:
         return jsonify(years)
     return jsonify([])
+
+# === Serve PDFs Directly by Filename ===
+
+@app.route("/download-url/<path:filename>")
+def serve_pdf_inline(filename):
+    file_path = os.path.join(PDF_FOLDER, filename)
+    if os.path.isfile(file_path):
+        return send_file(
+            file_path,
+            mimetype="application/pdf",
+            download_name=filename,
+            as_attachment=False
+        )
+    return "❌ File not found", 404
+
+# === Optional: Log download by POST (not used in chatbot) ===
 
 @app.route("/download", methods=["POST"])
 def download():
@@ -73,18 +89,9 @@ def download():
                          as_attachment=False)
     return "PDF Not Found", 404
 
-@app.route("/download-url/<path:filename>")
-def serve_pdf_inline(filename):
-    file_path = os.path.join(PDF_FOLDER, filename)
-    if os.path.isfile(file_path):
-        return send_file(file_path, mimetype="application/pdf",
-                         download_name=filename,
-                         as_attachment=False)
-    return "File not found", 404
-
 # === Helper Functions ===
 
-def build_filename(subject, exam_type, year):
+def build_filename(subject, exam_type, year=""):
     if exam_type == "material":
         return f"{subject}_material.pdf"
     elif exam_type.startswith("unit"):
@@ -103,13 +110,12 @@ def log_download(user_id, subject, exam_type, year):
             writer.writerow(["Timestamp", "User", "Subject", "ExamType", "Year"])
         writer.writerow([timestamp, user_id, subject, exam_type, year])
 
-# === Scheduled Jobs ===
+# === Scheduled Tasks ===
 
 def clean_logs():
     log_file = os.path.join(LOG_FOLDER, "downloads.csv")
     if not os.path.isfile(log_file):
         return
-
     try:
         df = pd.read_csv(log_file, parse_dates=["Timestamp"])
         cutoff = datetime.now() - timedelta(days=30)
@@ -122,14 +128,13 @@ def send_weekly_report():
     log_file = os.path.join(LOG_FOLDER, "downloads.csv")
     if not os.path.isfile(log_file):
         return
-
     try:
         df = pd.read_csv(log_file)
         total = len(df)
         top_subjects = df["Subject"].value_counts().head(3)
         top_users = df["User"].value_counts().head(3)
 
-        print("\n\U0001F4CA Weekly Report")
+        print("\n📊 Weekly Report")
         print("Total Downloads:", total)
         print("Top Subjects:")
         print(top_subjects)
@@ -144,7 +149,8 @@ def start_scheduler():
     scheduler.add_job(send_weekly_report, 'cron', day_of_week='mon', hour=9)
     scheduler.start()
 
-# === Run App ===
+# === Start Server ===
+
 if __name__ == "__main__":
     start_scheduler()
     port = int(os.environ.get("PORT", 5000))
